@@ -1,0 +1,13 @@
+{
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "headers": [
+    {
+      "source": "/(.*).json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=86400" },
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+      ]
+    }
+  ]
+}

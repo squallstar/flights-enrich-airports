@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airport Search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --primary: #0770e3;
+      --primary-hover: #0557b9;
+      --text: #161616;
+      --text-secondary: #626971;
+      --text-tertiary: #90969c;
+      --border: #dddde5;
+      --highlight: #e8f4fd;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    #root {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 60px 20px 120px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    .search-container {
+      position: relative;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(7, 112, 227, 0.12);
+    }
+
+    .search-icon {
+      padding: 0 4px 0 16px;
+      color: var(--text-tertiary);
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 17px;
+      padding: 16px 16px 16px 10px;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .search-input::placeholder { color: var(--text-tertiary); }
+
+    .clear-btn {
+      padding: 8px 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      font-size: 18px;
+      line-height: 1;
+      border-radius: 6px;
+      transition: background 0.1s;
+    }
+
+    .clear-btn:hover { background: var(--bg); }
+
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      max-height: 440px;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .dropdown::-webkit-scrollbar { width: 6px; }
+    .dropdown::-webkit-scrollbar-track { background: transparent; }
+    .dropdown::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .result-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-bottom: 1px solid #f0f0f5;
+    }
+
+    .result-item:last-child { border-bottom: none; }
+    .result-item:hover, .result-item.active { background: var(--highlight); }
+
+    .result-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #eef2f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .result-icon svg { color: var(--primary); }
+
+    .result-info { flex: 1; min-width: 0; }
+
+    .result-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-name .iata {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .result-detail {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .result-distance {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    .result-weight {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      background: #eef4fc;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: auto;
+      flex-shrink: 0;
+      align-self: center;
+    }
+
+    .match-source {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: #f0f0f5;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-secondary);
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stats {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .empty-state {
+      padding: 32px 18px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    .country-flag {
+      font-size: 14px;
+    }
+
+    .destinations {
+      margin-top: 36px;
+    }
+
+    .destinations-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .destinations-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .destinations-header .country-badge {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+      background: #eef4fc;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+
+    .dest-section {
+      margin-bottom: 24px;
+    }
+
+    .dest-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-tertiary);
+      margin-bottom: 10px;
+    }
+
+    .dest-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .dest-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .dest-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 2px 12px rgba(7, 112, 227, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .dest-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #eef4fc, #dce8f8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .dest-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dest-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dest-card-reason {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dest-detecting {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+
+    @media (max-width: 480px) {
+      .dest-grid { grid-template-columns: 1fr; }
+      #root { padding: 32px 16px 80px; }
+      .header h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+    const COUNTRY_NAMES = (() => {
+      try {
+        const dn = new Intl.DisplayNames(['en'], { type: 'region' });
+        return (code) => { try { return dn.of(code); } catch { return code; } };
+      } catch { return (code) => code; }
+    })();
+
+    const TZ_TO_COUNTRY = {
+      'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
+      'America/Los_Angeles': 'US', 'America/Phoenix': 'US', 'America/Anchorage': 'US',
+      'Pacific/Honolulu': 'US', 'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+      'America/Montreal': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA',
+      'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR',
+      'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT',
+      'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Zurich': 'CH',
+      'Europe/Vienna': 'AT', 'Europe/Lisbon': 'PT', 'Europe/Stockholm': 'SE',
+      'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI',
+      'Europe/Warsaw': 'PL', 'Europe/Prague': 'CZ', 'Europe/Budapest': 'HU',
+      'Europe/Bucharest': 'RO', 'Europe/Athens': 'GR', 'Europe/Istanbul': 'TR',
+      'Europe/Moscow': 'RU', 'Europe/Kiev': 'UA', 'Asia/Tokyo': 'JP',
+      'Asia/Seoul': 'KR', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK',
+      'Asia/Taipei': 'TW', 'Asia/Singapore': 'SG', 'Asia/Bangkok': 'TH',
+      'Asia/Jakarta': 'ID', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Manila': 'PH',
+      'Asia/Ho_Chi_Minh': 'VN', 'Asia/Kolkata': 'IN', 'Asia/Colombo': 'LK',
+      'Asia/Karachi': 'PK', 'Asia/Dhaka': 'BD', 'Asia/Dubai': 'AE',
+      'Asia/Riyadh': 'SA', 'Asia/Qatar': 'QA', 'Asia/Bahrain': 'BH',
+      'Asia/Kuwait': 'KW', 'Asia/Tehran': 'IR', 'Asia/Jerusalem': 'IL',
+      'Africa/Cairo': 'EG', 'Africa/Lagos': 'NG', 'Africa/Johannesburg': 'ZA',
+      'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA', 'Africa/Accra': 'GH',
+      'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Perth': 'AU',
+      'Australia/Brisbane': 'AU', 'Pacific/Auckland': 'NZ', 'America/Sao_Paulo': 'BR',
+      'America/Argentina/Buenos_Aires': 'AR', 'America/Mexico_City': 'MX',
+      'America/Bogota': 'CO', 'America/Lima': 'PE', 'America/Santiago': 'CL',
+    };
+
+    function detectUserCountry() {
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (TZ_TO_COUNTRY[tz]) return TZ_TO_COUNTRY[tz];
+        const region = tz.split('/')[0];
+        if (region === 'America') return 'US';
+        if (region === 'Europe') return 'GB';
+        if (region === 'Asia') return 'JP';
+        if (region === 'Australia') return 'AU';
+        if (region === 'Africa') return 'ZA';
+      } catch {}
+      const lang = (navigator.language || '').split('-');
+      if (lang[1]) return lang[1].toUpperCase();
+      return 'US';
+    }
+
+    const PlaneIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+      </svg>
+    );
+
+    const SearchIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+    );
+
+    function buildSearchIndex(airports) {
+      const docs = Object.entries(airports).map(([icao, a]) => {
+        const keywordList = [
+          ...(a.keywords || []),
+          ...(a.search_keywords || []),
+        ];
+        const allKeywords = keywordList.join(' ');
+
+        return {
+          icao,
+          iata: a.iata || '',
+          name: a.name || '',
+          city: a.city || '',
+          displayName: a.display_name || '',
+          country: a.country || '',
+          countryName: COUNTRY_NAMES(a.country || ''),
+          weight: a.weight || 0,
+          lat: a.lat,
+          lon: a.lon,
+          nearestCity: a.nearest_major_city || null,
+          allKeywords,
+          _keywordList: keywordList,
+        };
+      });
+
+      const fuse = new Fuse(docs, {
+        keys: [
+          { name: 'iata', weight: 10 },
+          { name: 'city', weight: 8 },
+          { name: 'displayName', weight: 7 },
+          { name: 'name', weight: 5 },
+          { name: 'countryName', weight: 3 },
+          { name: 'allKeywords', weight: 4 },
+        ],
+        threshold: 0.3,
+        distance: 200,
+        includeScore: true,
+        includeMatches: true,
+        minMatchCharLength: 2,
+        ignoreLocation: false,
+      });
+
+      return { fuse, docs };
+    }
+
+    function computeMatchTier(a, qLower) {
+      const iata = (a.iata || '').toLowerCase();
+      if (iata === qLower) return 0;
+
+      const primaryFields = [a.city, a.displayName, a.name];
+      if (primaryFields.some(f => f && f.toLowerCase() === qLower)) return 1;
+
+      if (iata.startsWith(qLower) || primaryFields.some(f => f && f.toLowerCase().startsWith(qLower))) return 2;
+
+      const kws = a._keywordList || [];
+      if (kws.some(k => k.toLowerCase() === qLower)) return 3;
+      if (kws.some(k => k.toLowerCase().startsWith(qLower))) return 4;
+
+      const allText = [a.iata, a.city, a.displayName, a.name, a.allKeywords]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (allText.includes(qLower)) return 5;
+
+      return 6;
+    }
+
+    function getMatchSource(matches) {
+      if (!matches || matches.length === 0) return null;
+      const key = matches[0].key;
+      const labels = {
+        iata: 'IATA code',
+        city: 'city',
+        displayName: 'name',
+        name: 'airport name',
+        countryName: 'country',
+        allKeywords: 'keyword',
+      };
+      return labels[key] || key;
+    }
+
+    function App() {
+      const [airports, setAirports] = useState(null);
+      const [destinations, setDestinations] = useState(null);
+      const [userCountry, setUserCountry] = useState(null);
+      const [query, setQuery] = useState('');
+      const [results, setResults] = useState([]);
+      const [showDropdown, setShowDropdown] = useState(false);
+      const [activeIndex, setActiveIndex] = useState(-1);
+      const [loadError, setLoadError] = useState(null);
+      const inputRef = useRef(null);
+      const dropdownRef = useRef(null);
+
+      const searchIndex = useMemo(() => {
+        if (!airports) return null;
+        return buildSearchIndex(airports);
+      }, [airports]);
+
+      const airportByIata = useMemo(() => {
+        if (!airports) return {};
+        const map = {};
+        for (const a of Object.values(airports)) {
+          if (a.iata) map[a.iata] = a;
+        }
+        return map;
+      }, [airports]);
+
+      useEffect(() => {
+        fetch('airports_enriched.json')
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(setAirports)
+          .catch(e => setLoadError(`Failed to load airports_enriched.json: ${e.message}`));
+
+        fetch('destinations.json')
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(setDestinations)
+          .catch(() => {});
+
+        setUserCountry(detectUserCountry());
+      }, []);
+
+      const search = useCallback((q) => {
+        if (!searchIndex || q.trim().length < 1) {
+          setResults([]);
+          return;
+        }
+
+        const raw = searchIndex.fuse.search(q, { limit: 50 });
+
+        const qLower = q.trim().toLowerCase();
+        const scored = raw.map(r => {
+          const a = r.item;
+          const tier = computeMatchTier(a, qLower);
+          const weightBoost = (a.weight || 0) * 0.003;
+
+          return {
+            ...a,
+            fuseScore: r.score,
+            matches: r.matches,
+            matchSource: getMatchSource(r.matches),
+            tier,
+            combinedScore: tier + r.score - weightBoost,
+          };
+        });
+
+        scored.sort((a, b) => a.combinedScore - b.combinedScore);
+
+        setResults(scored.slice(0, 15));
+        setActiveIndex(-1);
+      }, [searchIndex]);
+
+      useEffect(() => {
+        const timer = setTimeout(() => search(query), 80);
+        return () => clearTimeout(timer);
+      }, [query, search]);
+
+      const handleKeyDown = (e) => {
+        if (!showDropdown || results.length === 0) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setActiveIndex(i => Math.min(i + 1, results.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setActiveIndex(i => Math.max(i - 1, 0));
+        } else if (e.key === 'Escape') {
+          setShowDropdown(false);
+        }
+      };
+
+      useEffect(() => {
+        if (activeIndex >= 0 && dropdownRef.current) {
+          const el = dropdownRef.current.children[activeIndex];
+          if (el) el.scrollIntoView({ block: 'nearest' });
+        }
+      }, [activeIndex]);
+
+      useEffect(() => {
+        const handler = (e) => {
+          if (!e.target.closest('.search-container')) setShowDropdown(false);
+        };
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
+      }, []);
+
+      if (loadError) {
+        return (
+          <div className="loading">
+            <p style={{color: '#d32f2f'}}>{loadError}</p>
+            <p style={{marginTop: 12, fontSize: 13}}>
+              Run <code>npx serve .</code> in the airports directory to start a local server.
+            </p>
+          </div>
+        );
+      }
+
+      if (!airports) {
+        return (
+          <div className="loading">
+            <div className="loading-spinner" />
+            <p>Loading 7,911 airports...</p>
+          </div>
+        );
+      }
+
+      return (
+        <>
+          <div className="header">
+            <h1>Nuitee Flights - Airport Search</h1>
+          </div>
+
+          <div className="search-container">
+            <div className="search-box">
+              <span className="search-icon"><SearchIcon /></span>
+              <input
+                ref={inputRef}
+                className="search-input"
+                type="text"
+                placeholder="Search city, airport, or IATA code..."
+                value={query}
+                onChange={e => { setQuery(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+              {query && (
+                <button className="clear-btn" onClick={() => { setQuery(''); inputRef.current.focus(); }}>
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {showDropdown && query.trim().length >= 1 && (
+              <div className="dropdown" ref={dropdownRef}>
+                {results.length === 0 ? (
+                  <div className="empty-state">No airports found for "{query}"</div>
+                ) : (
+                  results.map((r, i) => (
+                    <div
+                      key={r.icao}
+                      className={`result-item ${i === activeIndex ? 'active' : ''}`}
+                      onClick={() => { setQuery(r.displayName || r.iata); setShowDropdown(false); }}
+                    >
+                      <div className="result-icon"><PlaneIcon /></div>
+                      <div className="result-info">
+                        <div className="result-name">{r.displayName || `${r.city} (${r.iata})`}</div>
+                        <div className="result-detail">
+                          <span className="country-flag">{countryFlag(r.country)}</span>
+                          <span>{COUNTRY_NAMES(r.country)}</span>
+                          {r.matchSource && r.matchSource !== 'name' && r.matchSource !== 'city' && (
+                            <span className="match-source">matched: {r.matchSource}</span>
+                          )}
+                        </div>
+                        {r.nearestCity && r.nearestCity.distance_km > 0 && (
+                          <div className="result-distance">
+                            {r.nearestCity.distance_km}km from {r.nearestCity.name}
+                          </div>
+                        )}
+                      </div>
+                      {r.weight > 0 && <span className="result-weight">w:{r.weight}</span>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="stats">
+            {results.length > 0 && `${results.length} results`}
+          </div>
+
+          {!query && destinations && userCountry && (
+            <DestinationsPanel
+              destinations={destinations}
+              userCountry={userCountry}
+              airportByIata={airportByIata}
+              onSelect={(iata) => { setQuery(airportByIata[iata]?.display_name || iata); }}
+            />
+          )}
+        </>
+      );
+    }
+
+    function DestinationsPanel({ destinations, userCountry, airportByIata, onSelect }) {
+      const countryDests = destinations[userCountry];
+      if (!countryDests) return null;
+
+      const domestic = (countryDests.domestic || []).slice(0, 6);
+      const international = (countryDests.international || []).slice(0, 8);
+
+      if (domestic.length === 0 && international.length === 0) return null;
+
+      return (
+        <div className="destinations">
+          <div className="destinations-header">
+            <h2>Popular destinations</h2>
+            <span className="country-badge">
+              {countryFlag(userCountry)} {COUNTRY_NAMES(userCountry)}
+            </span>
+          </div>
+
+          {domestic.length > 0 && (
+            <div className="dest-section">
+              <div className="dest-section-title">Domestic</div>
+              <div className="dest-grid">
+                {domestic.map(d => (
+                  <DestCard
+                    key={d.iata}
+                    dest={d}
+                    airport={airportByIata[d.iata]}
+                    onClick={() => onSelect(d.iata)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {international.length > 0 && (
+            <div className="dest-section">
+              <div className="dest-section-title">International</div>
+              <div className="dest-grid">
+                {international.map(d => (
+                  <DestCard
+                    key={d.iata}
+                    dest={d}
+                    airport={airportByIata[d.iata]}
+                    onClick={() => onSelect(d.iata)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function DestCard({ dest, airport, onClick }) {
+      const name = airport?.display_name || dest.iata;
+      const flag = airport ? countryFlag(airport.country) : '';
+
+      return (
+        <div className="dest-card" onClick={onClick}>
+          <div className="dest-card-icon">{flag || '✈'}</div>
+          <div className="dest-card-info">
+            <div className="dest-card-name">{name}</div>
+            <div className="dest-card-reason">{dest.reason}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function countryFlag(code) {
+      if (!code || code.length !== 2) return '';
+      const offset = 127397;
+      return String.fromCodePoint(...[...code.toUpperCase()].map(c => c.charCodeAt(0) + offset));
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
