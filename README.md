@@ -152,6 +152,31 @@ python generate_destinations.py --concurrency 8
 
 ---
 
+## 3. Test UI (`index.html`)
+
+A single-file React app to test the enriched data with a Skyscanner-style autocomplete and destination recommendations.
+
+### Running locally
+
+```bash
+npx serve .
+```
+
+Then open [http://localhost:3000](http://localhost:3000).
+
+### Features
+
+- **Fuzzy search** across city, airport name, IATA code, and all keywords (including multilingual)
+- **Tier-based ranking** — exact matches always beat prefix matches, which always beat fuzzy matches; weight breaks ties within the same tier
+- **Popular destinations** — shown below the search bar when the input is empty, personalized to the user's country (detected from browser timezone)
+- Clicking a destination card populates the search box
+
+### How country detection works
+
+The UI detects the user's country from `Intl.DateTimeFormat().resolvedOptions().timeZone` (e.g., `America/New_York` → US, `Europe/Rome` → IT). This works without any API calls or IP lookups. In production, you'd replace this with IP-based geolocation for better accuracy.
+
+---
+
 ## Resumability
 
 Both scripts are **self-resuming**. They read their output file on startup and skip entries already present. Progress is saved after every batch via atomic writes (write to `.tmp`, then rename).
@@ -167,6 +192,8 @@ If a script crashes or you stop it, just run it again — it picks up where it l
 | `destinations.json` | Popular destinations per country (generated) |
 | `enrich_airports.py` | Airport enrichment script |
 | `generate_destinations.py` | Destination recommendations script |
+| `index.html` | Test UI with search + destinations |
+| `vercel.json` | Vercel deployment config |
 | `.env` | OpenAI API key (not committed) |
 
 ## Cost estimates
